@@ -305,41 +305,71 @@ export default function AdminDashboard() {
          };
       }).reverse(); // cronológico
 
-  // Motor: Grafico Granulometria 
-  let gCount = 0;
-  const accPassantes: Record<string, number> = {};
-  
-  logsFiltrados.forEach(log => {
-      if ((log.ensaio_id === 'granulometria' || log.ensaio_id === 'betume_granulometria') && log.valores?.pesoMistura) {
-          const pm = Number(log.valores.pesoMistura);
-          if (pm > 0 && typeof log.valores.ret_200 !== 'undefined') {
-              gCount++;
-              let sumRet = 0;
-              const peneiras = ['2', '1_5', '1', '3_4', '1_2', '3_8', '4', '10', '40', '80', '200'];
-              peneiras.forEach(p => {
-                  if(!accPassantes[p]) accPassantes[p] = 0;
-                  const valRet = Number(log.valores[`ret_${p}`] || 0);
-                  sumRet += valRet;
-                  const passante = Math.max(0, 100 - ((sumRet/pm)*100));
-                  accPassantes[p] += passante;
-              });
-          }
-      }
-  });
+  const limitesGranulometricos: Record<string, any> = {
+     'Faixa A (DNIT)': { '2"': [100,100], '1 1/2"': [100,100], '1"': [100,100], '3/4"': [100,100], '1/2"': [75,100], '3/8"': [60,90], 'Nº 4': [35,65], 'Nº 10': [20,50], 'Nº 40': [10,30], 'Nº 80': [5,20], 'Nº 200': [3,7] },
+     'Faixa B (DNIT)': { '2"': [100,100], '1 1/2"': [100,100], '1"': [100,100], '3/4"': [100,100], '1/2"': [75,100], '3/8"': [60,90], 'Nº 4': [35,65], 'Nº 10': [20,50], 'Nº 40': [10,30], 'Nº 80': [5,20], 'Nº 200': [3,7] },
+     'Faixa C (DNIT)': { '2"': [100,100], '1 1/2"': [100,100], '1"': [100,100], '3/4"': [100,100], '1/2"': [85,100], '3/8"': [75,100], 'Nº 4': [50,85], 'Nº 10': [30,75], 'Nº 40': [15,40], 'Nº 80': [8,30], 'Nº 200': [5,9] },
+     'Faixa A (DER-PR)': { '2"': [100,100], '1 1/2"': [100,100], '1"': [100,100], '3/4"': [100,100], '1/2"': [75,100], '3/8"': [60,90], 'Nº 4': [35,65], 'Nº 10': [20,50], 'Nº 40': [10,30], 'Nº 80': [5,20], 'Nº 200': [3,7] },
+     'Faixa B (DER-PR)': { '2"': [100,100], '1 1/2"': [100,100], '1"': [100,100], '3/4"': [100,100], '1/2"': [85,100], '3/8"': [75,100], 'Nº 4': [50,85], 'Nº 10': [30,75], 'Nº 40': [15,40], 'Nº 80': [8,30], 'Nº 200': [4,8] },
+     'Faixa C (DER-PR)': { '2"': [100,100], '1 1/2"': [100,100], '1"': [100,100], '3/4"': [100,100], '1/2"': [100,100], '3/8"': [85,100], 'Nº 4': [55,75], 'Nº 10': [40,60], 'Nº 40': [20,35], 'Nº 80': [10,22], 'Nº 200': [5,9] }
+  };
 
-  const graficoGranulometriaDinamico = [
-      { peneira: '2"', size: 50.8, minFaixaC: 100, maxFaixaC: 100, ensaio: gCount ? accPassantes['2']/gCount : null },
-      { peneira: '1 1/2"', size: 38.1, minFaixaC: 100, maxFaixaC: 100, ensaio: gCount ? accPassantes['1_5']/gCount : null },
-      { peneira: '1"', size: 25.4, minFaixaC: 100, maxFaixaC: 100, ensaio: gCount ? accPassantes['1']/gCount : null },
-      { peneira: '3/4"', size: 19.1, minFaixaC: 100, maxFaixaC: 100, ensaio: gCount ? accPassantes['3_4']/gCount : null },
-      { peneira: '1/2"', size: 12.7, minFaixaC: 85, maxFaixaC: 100, ensaio: gCount ? accPassantes['1_2']/gCount : null },
-      { peneira: '3/8"', size: 9.5, minFaixaC: 75, maxFaixaC: 100, ensaio: gCount ? accPassantes['3_8']/gCount : null },
-      { peneira: 'Nº 4', size: 4.8, minFaixaC: 50, maxFaixaC: 85, ensaio: gCount ? accPassantes['4']/gCount : null },
-      { peneira: 'Nº 10', size: 2.0, minFaixaC: 30, maxFaixaC: 75, ensaio: gCount ? accPassantes['10']/gCount : null },
-      { peneira: 'Nº 40', size: 0.42, minFaixaC: 15, maxFaixaC: 40, ensaio: gCount ? accPassantes['40']/gCount : null },
-      { peneira: 'Nº 80', size: 0.18, minFaixaC: 8, maxFaixaC: 30, ensaio: gCount ? accPassantes['80']/gCount : null },
-      { peneira: 'Nº 200', size: 0.075, minFaixaC: 5, maxFaixaC: 10, ensaio: gCount ? accPassantes['200']/gCount : null },
-  ].reverse();
+  const extrairCurvaMaterial = (materialFn: (l: any) => boolean, applyLimits: boolean) => {
+      let gCount = 0;
+      const accPassantes: Record<string, number> = {};
+      const filtrados = logsFiltrados.filter(materialFn);
+      
+      filtrados.forEach(log => {
+          if (log.valores?.pesoMistura) {
+              const pm = Number(log.valores.pesoMistura);
+              if (pm > 0 && typeof log.valores.ret_200 !== 'undefined') {
+                  gCount++;
+                  let sumRet = 0;
+                  const peneiras = ['2', '1_5', '1', '3_4', '1_2', '3_8', '4', '10', '40', '80', '200'];
+                  peneiras.forEach(p => {
+                      if(!accPassantes[p]) accPassantes[p] = 0;
+                      const valRet = Number(log.valores[`ret_${p}`] || 0);
+                      sumRet += valRet;
+                      const passante = Math.max(0, 100 - ((sumRet/pm)*100));
+                      accPassantes[p] += passante;
+                  });
+              }
+          }
+      });
+
+      let ultFaixaNome = 'Faixa C (DER-PR)';
+      if (applyLimits) {
+          const ultimoLogFaixa = filtrados.find(l => l.valores?.faixa);
+          if (ultimoLogFaixa) ultFaixaNome = ultimoLogFaixa.valores.faixa;
+      }
+      const tol = limitesGranulometricos[ultFaixaNome] || limitesGranulometricos['Faixa C (DER-PR)'];
+
+      return {
+          faixaNome: ultFaixaNome,
+          dados: [
+              { peneira: '2"', size: 50.8, min: applyLimits ? tol['2"'][0] : null, max: applyLimits ? tol['2"'][1] : null, ensaio: gCount ? accPassantes['2']/gCount : null },
+              { peneira: '1 1/2"', size: 38.1, min: applyLimits ? tol['1 1/2"'][0] : null, max: applyLimits ? tol['1 1/2"'][1] : null, ensaio: gCount ? accPassantes['1_5']/gCount : null },
+              { peneira: '1"', size: 25.4, min: applyLimits ? tol['1"'][0] : null, max: applyLimits ? tol['1"'][1] : null, ensaio: gCount ? accPassantes['1']/gCount : null },
+              { peneira: '3/4"', size: 19.1, min: applyLimits ? tol['3/4"'][0] : null, max: applyLimits ? tol['3/4"'][1] : null, ensaio: gCount ? accPassantes['3_4']/gCount : null },
+              { peneira: '1/2"', size: 12.7, min: applyLimits ? tol['1/2"'][0] : null, max: applyLimits ? tol['1/2"'][1] : null, ensaio: gCount ? accPassantes['1_2']/gCount : null },
+              { peneira: '3/8"', size: 9.5, min: applyLimits ? tol['3/8"'][0] : null, max: applyLimits ? tol['3/8"'][1] : null, ensaio: gCount ? accPassantes['3_8']/gCount : null },
+              { peneira: 'Nº 4', size: 4.8, min: applyLimits ? tol['Nº 4'][0] : null, max: applyLimits ? tol['Nº 4'][1] : null, ensaio: gCount ? accPassantes['4']/gCount : null },
+              { peneira: 'Nº 10', size: 2.0, min: applyLimits ? tol['Nº 10'][0] : null, max: applyLimits ? tol['Nº 10'][1] : null, ensaio: gCount ? accPassantes['10']/gCount : null },
+              { peneira: 'Nº 40', size: 0.42, min: applyLimits ? tol['Nº 40'][0] : null, max: applyLimits ? tol['Nº 40'][1] : null, ensaio: gCount ? accPassantes['40']/gCount : null },
+              { peneira: 'Nº 80', size: 0.18, min: applyLimits ? tol['Nº 80'][0] : null, max: applyLimits ? tol['Nº 80'][1] : null, ensaio: gCount ? accPassantes['80']/gCount : null },
+              { peneira: 'Nº 200', size: 0.075, min: applyLimits ? tol['Nº 200'][0] : null, max: applyLimits ? tol['Nº 200'][1] : null, ensaio: gCount ? accPassantes['200']/gCount : null },
+          ].reverse()
+      };
+  };
+
+  const curvasDisponiveis = [
+      { id: 'cbuq', titulo: 'Curva Granulométrica (CBUQ)', sub: 'Mistura Betuminosa', motor: extrairCurvaMaterial(l => l.ensaio_id === 'betume_granulometria' || (l.ensaio_id === 'granulometria' && (!l.valores?.material || l.valores?.material.includes('CBUQ'))), true), color: 'hsl(var(--primary))' },
+      { id: 'bgs', titulo: 'Curva Granulométrica (BGS)', sub: 'Brita Graduada Simples', motor: extrairCurvaMaterial(l => l.ensaio_id === 'granulometria' && l.valores?.material === 'BGS', true), color: '#3b82f6' },
+      { id: 'brita12', titulo: 'Curva Granulométrica (Brita 1/2")', sub: 'Insumo Simples', motor: extrairCurvaMaterial(l => l.ensaio_id === 'granulometria' && l.valores?.material === 'Brita 1/2"', false), color: '#8b5cf6' },
+      { id: 'brita34', titulo: 'Curva Granulométrica (Brita 3/4")', sub: 'Insumo Simples', motor: extrairCurvaMaterial(l => l.ensaio_id === 'granulometria' && l.valores?.material === 'Brita 3/4"', false), color: '#d946ef' },
+      { id: 'pedrisco', titulo: 'Curva (Pedrisco)', sub: 'Insumo Simples', motor: extrairCurvaMaterial(l => l.ensaio_id === 'granulometria' && l.valores?.material === 'Pedrisco', false), color: '#f97316' },
+      { id: 'po_pedra', titulo: 'Curva (Pó de Pedra)', sub: 'Insumo Fino', motor: extrairCurvaMaterial(l => l.ensaio_id === 'granulometria' && l.valores?.material === 'Pó de pedra', false), color: '#14b8a6' },
+  ];
 
   // Motor: Compliance Bar (Progress)
   const totalEnsaiosAvaliativos = logsFiltrados.filter(l => l.resultado_status === 'Aprovado' || l.resultado_status === 'Reprovado');
@@ -447,36 +477,42 @@ export default function AdminDashboard() {
             {/* Bento Grid dos Gráficos */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))', gap: '24px' }}>
               
-              <div className="glass-panel" style={{ padding: '24px', gridColumn: '1 / -1', minWidth: 0 }}>
-                <h3 style={{ fontSize: '1.2rem', marginBottom: '8px' }}>Perfil Granulométrico (Curva Contínua)</h3>
-                <p style={{ color: 'hsl(var(--text-muted))', fontSize: '0.85rem', marginBottom: '24px' }}>Comparativo Média Amostral vs Limites Fechados da Faixa C do DNIT/DNER.</p>
-                <div style={{ width: '100%', height: 350, minWidth: 0 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={graficoGranulometriaDinamico} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsla(var(--border)/0.5)" />
-                      <XAxis 
-                          dataKey="size" 
-                          type="number" 
-                          scale="log" 
-                          domain={[0.01, 100]} 
-                          tick={{fill: 'hsl(var(--text-muted))'}} 
-                          label={{ value: 'Abertura da Peneira (mm)', position: 'bottom', offset: 0, fill: 'hsl(var(--text-muted))', fontSize: '0.8rem' }}
-                          tickFormatter={(val) => val}
-                      />
-                      <YAxis 
-                          domain={[0, 100]} 
-                          ticks={[0, 20, 40, 60, 80, 100]}
-                          tick={{fill: 'hsl(var(--text-muted))'}} 
-                      />
-                      <Tooltip contentStyle={{ background: 'hsl(var(--surface))', borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px hsla(0,0%,0%,0.1)' }} />
-                      <Legend verticalAlign="top" height={36}/>
-                      <Line type="linear" dataKey="maxFaixaC" name="Superior (%)" stroke="#ef4444" strokeWidth={2} dot={false} strokeDasharray="5 5" />
-                      <Line type="linear" dataKey="minFaixaC" name="Inferior (%)" stroke="#ef4444" strokeWidth={2} dot={false} strokeDasharray="5 5" />
-                      <Line type="linear" dataKey="ensaio" name="Média Base Obras" stroke="hsl(var(--primary))" strokeWidth={4} activeDot={{ r: 8 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
+              {curvasDisponiveis.map((curva) => (
+                 <div key={curva.id} className="glass-panel" style={{ padding: '24px', gridColumn: ['cbuq', 'bgs'].includes(curva.id) ? '1 / -1' : 'auto', minWidth: 0 }}>
+                  <h3 style={{ fontSize: '1.2rem', marginBottom: '8px' }}>{curva.titulo}</h3>
+                  <p style={{ color: 'hsl(var(--text-muted))', fontSize: '0.85rem', marginBottom: '24px' }}>
+                     {curva.motor.dados[0].min !== null 
+                        ? `Comparativo Média Amostral vs Limites baseados na última coleta (${curva.motor.faixaNome}).`
+                        : `Média amostral contínua extraída de ${curva.sub}.`}
+                  </p>
+                  <div style={{ width: '100%', height: 350, minWidth: 0 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={curva.motor.dados} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsla(var(--border)/0.5)" />
+                        <XAxis 
+                            dataKey="size" 
+                            type="number" 
+                            scale="log" 
+                            domain={[0.01, 100]} 
+                            tick={{fill: 'hsl(var(--text-muted))'}} 
+                            label={{ value: 'Abertura da Peneira (mm)', position: 'bottom', offset: 0, fill: 'hsl(var(--text-muted))', fontSize: '0.8rem' }}
+                            tickFormatter={(val) => val}
+                        />
+                        <YAxis 
+                            domain={[0, 100]} 
+                            ticks={[0, 20, 40, 60, 80, 100]}
+                            tick={{fill: 'hsl(var(--text-muted))'}} 
+                        />
+                        <Tooltip contentStyle={{ background: 'hsl(var(--surface))', borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px hsla(0,0%,0%,0.1)' }} />
+                        <Legend verticalAlign="top" height={36}/>
+                        {curva.motor.dados[0].max !== null && <Line type="linear" dataKey="max" name="Superior (%)" stroke="#ef4444" strokeWidth={2} dot={false} strokeDasharray="5 5" />}
+                        {curva.motor.dados[0].min !== null && <Line type="linear" dataKey="min" name="Inferior (%)" stroke="#ef4444" strokeWidth={2} dot={false} strokeDasharray="5 5" />}
+                        <Line type="linear" dataKey="ensaio" name="Média Base Obras" stroke={curva.color} strokeWidth={4} activeDot={{ r: 8 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
-              </div>
+              ))}
 
                <div className="glass-panel" style={{ padding: '24px', minWidth: '400px', overflow: 'hidden' }}>
                 <h3 style={{ fontSize: '1.2rem', marginBottom: '8px' }}>Picos Históricos do Teor Betuminoso (%)</h3>
