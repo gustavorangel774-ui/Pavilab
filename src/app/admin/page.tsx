@@ -314,7 +314,16 @@ export default function AdminDashboard() {
      'Faixa C (DER-PR)': { '2"': [100,100], '1 1/2"': [100,100], '1"': [100,100], '3/4"': [100,100], '1/2"': [100,100], '3/8"': [85,100], 'Nº 4': [55,75], 'Nº 10': [40,60], 'Nº 40': [20,35], 'Nº 80': [10,22], 'Nº 200': [5,9] }
   };
 
-  const extrairCurvaMaterial = (materialFn: (l: any) => boolean, applyLimits: boolean) => {
+  const limitesGranulometricosBGS: Record<string, any> = {
+     'Faixa A (DER-PR)': { '2"': [100,100], '1 1/2"': [100,100], '1"': [75,100], '3/4"': [60,90], '1/2"': [50,80], '3/8"': [45,75], 'Nº 4': [30,60], 'Nº 10': [20,45], 'Nº 40': [15,30], 'Nº 80': [10,20], 'Nº 200': [5,15] },
+     'Faixa B (DER-PR)': { '2"': [100,100], '1 1/2"': [100,100], '1"': [75,100], '3/4"': [60,90], '1/2"': [50,80], '3/8"': [45,75], 'Nº 4': [30,60], 'Nº 10': [20,45], 'Nº 40': [15,30], 'Nº 80': [10,20], 'Nº 200': [5,15] },
+     'Faixa C (DER-PR)': { '2"': [100,100], '1 1/2"': [100,100], '1"': [100,100], '3/4"': [75,100], '1/2"': [60,90], '3/8"': [55,85], 'Nº 4': [35,65], 'Nº 10': [25,50], 'Nº 40': [15,30], 'Nº 80': [10,20], 'Nº 200': [5,15] },
+     'Faixa A (DNIT)': { '2"': [100,100], '1 1/2"': [100,100], '1"': [75,100], '3/4"': [60,90], '1/2"': [50,80], '3/8"': [45,75], 'Nº 4': [30,60], 'Nº 10': [20,45], 'Nº 40': [15,30], 'Nº 80': [10,20], 'Nº 200': [5,15] },
+     'Faixa B (DNIT)': { '2"': [100,100], '1 1/2"': [100,100], '1"': [75,100], '3/4"': [60,90], '1/2"': [50,80], '3/8"': [45,75], 'Nº 4': [30,60], 'Nº 10': [20,45], 'Nº 40': [15,30], 'Nº 80': [10,20], 'Nº 200': [5,15] },
+     'Faixa C (DNIT)': { '2"': [100,100], '1 1/2"': [100,100], '1"': [100,100], '3/4"': [75,100], '1/2"': [60,90], '3/8"': [55,85], 'Nº 4': [35,65], 'Nº 10': [25,50], 'Nº 40': [15,30], 'Nº 80': [10,20], 'Nº 200': [5,15] }
+  };
+
+  const extrairCurvaMaterial = (materialFn: (l: any) => boolean, applyLimits: boolean, typeDict: 'CBUQ' | 'BGS' = 'CBUQ') => {
       let gCount = 0;
       const accPassantes: Record<string, number> = {};
       const filtrados = logsFiltrados.filter(materialFn);
@@ -342,7 +351,9 @@ export default function AdminDashboard() {
           const ultimoLogFaixa = filtrados.find(l => l.valores?.faixa);
           if (ultimoLogFaixa) ultFaixaNome = ultimoLogFaixa.valores.faixa;
       }
-      const tol = limitesGranulometricos[ultFaixaNome] || limitesGranulometricos['Faixa C (DER-PR)'];
+      
+      const dicionario = typeDict === 'BGS' ? limitesGranulometricosBGS : limitesGranulometricos;
+      const tol = dicionario[ultFaixaNome] || dicionario['Faixa C (DER-PR)'];
 
       return {
           faixaNome: ultFaixaNome,
@@ -363,8 +374,8 @@ export default function AdminDashboard() {
   };
 
   const curvasDisponiveis = [
-      { id: 'cbuq', titulo: 'Curva Granulométrica (CBUQ)', sub: 'Mistura Betuminosa', motor: extrairCurvaMaterial(l => l.ensaio_id === 'betume_granulometria' || (l.ensaio_id === 'granulometria' && (!l.valores?.material || l.valores?.material.includes('CBUQ'))), true), color: 'hsl(var(--primary))' },
-      { id: 'bgs', titulo: 'Curva Granulométrica (BGS)', sub: 'Brita Graduada Simples', motor: extrairCurvaMaterial(l => l.ensaio_id === 'granulometria' && l.valores?.material === 'BGS', true), color: '#3b82f6' },
+      { id: 'cbuq', titulo: 'Curva Granulométrica (CBUQ)', sub: 'Mistura Betuminosa', motor: extrairCurvaMaterial(l => l.ensaio_id === 'betume_granulometria' || (l.ensaio_id === 'granulometria' && (!l.valores?.material || l.valores?.material.includes('CBUQ'))), true, 'CBUQ'), color: 'hsl(var(--primary))' },
+      { id: 'bgs', titulo: 'Curva Granulométrica (BGS)', sub: 'Brita Graduada Simples', motor: extrairCurvaMaterial(l => l.ensaio_id === 'granulometria' && l.valores?.material === 'BGS', true, 'BGS'), color: '#3b82f6' },
       { id: 'brita12', titulo: 'Curva Granulométrica (Brita 1/2")', sub: 'Insumo Simples', motor: extrairCurvaMaterial(l => l.ensaio_id === 'granulometria' && l.valores?.material === 'Brita 1/2"', false), color: '#8b5cf6' },
       { id: 'brita34', titulo: 'Curva Granulométrica (Brita 3/4")', sub: 'Insumo Simples', motor: extrairCurvaMaterial(l => l.ensaio_id === 'granulometria' && l.valores?.material === 'Brita 3/4"', false), color: '#d946ef' },
       { id: 'pedrisco', titulo: 'Curva (Pedrisco)', sub: 'Insumo Simples', motor: extrairCurvaMaterial(l => l.ensaio_id === 'granulometria' && l.valores?.material === 'Pedrisco', false), color: '#f97316' },
