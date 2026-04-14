@@ -24,7 +24,7 @@ export const mockEnsaios = [
   },
   { 
     id: 'granulometria', 
-    nome: 'Granulometria (Faixa C - DNIT)', 
+    nome: 'Granulometria (Solos, BGS e Agregados)', 
     campos: [
       { id: 'peneira1polegada', label: 'Passante Peneira 1" (%)', tipo: 'number' }, 
       { id: 'peneira3_4', label: 'Passante Peneira 3/4" (%)', tipo: 'number' },

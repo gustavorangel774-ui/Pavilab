@@ -374,7 +374,7 @@ export default function AdminDashboard() {
   };
 
   const curvasDisponiveis = [
-      { id: 'cbuq', titulo: 'Curva Granulométrica (CBUQ)', sub: 'Mistura Betuminosa', motor: extrairCurvaMaterial(l => l.ensaio_id === 'betume_granulometria' || (l.ensaio_id === 'granulometria' && (!l.valores?.material || l.valores?.material.includes('CBUQ'))), true, 'CBUQ'), color: 'hsl(var(--primary))' },
+      { id: 'cbuq', titulo: 'Curva Granulométrica (CBUQ)', sub: 'Mistura Betuminosa (Teor e Granulometria)', motor: extrairCurvaMaterial(l => l.ensaio_id === 'betume_granulometria', true, 'CBUQ'), color: 'hsl(var(--primary))' },
       { id: 'bgs', titulo: 'Curva Granulométrica (BGS)', sub: 'Brita Graduada Simples', motor: extrairCurvaMaterial(l => l.ensaio_id === 'granulometria' && l.valores?.material === 'BGS', true, 'BGS'), color: '#3b82f6' },
       { id: 'brita12', titulo: 'Curva Granulométrica (Brita 1/2")', sub: 'Insumo Simples', motor: extrairCurvaMaterial(l => l.ensaio_id === 'granulometria' && l.valores?.material === 'Brita 1/2"', false), color: '#8b5cf6' },
       { id: 'brita34', titulo: 'Curva Granulométrica (Brita 3/4")', sub: 'Insumo Simples', motor: extrairCurvaMaterial(l => l.ensaio_id === 'granulometria' && l.valores?.material === 'Brita 3/4"', false), color: '#d946ef' },
